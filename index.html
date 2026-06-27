@@ -54,37 +54,17 @@
 
   .board-section{padding:22px 0}
   .board-scroll{overflow-x:auto;padding-bottom:8px}
-  .fretboard{position:relative;background:linear-gradient(180deg,#332a1d,#251d14);border:1px solid #3a2f22;border-radius:var(--radius);padding:18px 16px 8px}
-  .nut{position:absolute;top:18px;width:7px;background:#d8d2c4;border-radius:3px;z-index:3}
-  .fretwire{position:absolute;width:2.5px;background:#8a7a5e;top:18px;z-index:1}
-  .boxshade{position:absolute;top:18px;background:rgba(120,170,230,.07);border-left:1px dashed rgba(150,190,240,.35);border-right:1px dashed rgba(150,190,240,.35);z-index:0}
-  .frets{position:relative;z-index:2}
-  .string-row{position:relative;height:54px;display:flex;align-items:center}
-  .string-line{position:absolute;right:10px;top:50%}
-  .string-row:nth-child(1) .string-line{height:3px;background:#6a5c44}
-  .string-row:nth-child(2) .string-line{height:2.6px;background:#665841}
-  .string-row:nth-child(3) .string-line{height:2.2px;background:#62543e}
-  .string-row:nth-child(4) .string-line{height:1.8px;background:#5e503a}
-  .string-row:nth-child(5) .string-line{height:1.4px;background:#5a4d37}
-  .string-row:nth-child(6) .string-line{height:1.1px;background:#564a34}
-  .open-label{position:absolute;left:16px;width:28px;text-align:center;font-size:13px;color:var(--ink-faint);font-weight:600}
-  .cell{position:absolute;width:40px;height:40px;top:50%;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center}
-  .dot{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;position:relative;transition:box-shadow .22s ease-out, transform .22s ease-out}
-  .dot.min{background:var(--minor)}
-  .dot.maj{background:var(--major)}
-  .dot.both{background:linear-gradient(90deg,var(--minor) 50%,var(--major) 50%)}
-  .dot.diatonic{background:var(--diatonic);font-size:11px;width:32px;height:32px}
-  .dot.blue{background:var(--blue)}
-  .dot.root{box-shadow:0 0 0 3px var(--rootring), 0 0 0 4px rgba(0,0,0,.35)}
-  .dot.lit{box-shadow:0 0 0 3px rgba(63,185,138,.95), 0 0 22px 4px rgba(63,185,138,.55);transform:scale(1.12);z-index:7}
-  .dot.root.lit{box-shadow:0 0 0 3px var(--rootring), 0 0 0 4px rgba(63,185,138,.95), 0 0 22px 5px rgba(63,185,138,.55)}
-  .glow{position:absolute;width:36px;height:36px;border-radius:50%;top:0;left:0;pointer-events:none;z-index:6;opacity:0;transform:translate(-50%,-50%);box-shadow:0 0 0 3px rgba(63,185,138,.95),0 0 26px 5px rgba(63,185,138,.5);transition:opacity .12s, left .14s ease-out, top .14s ease-out}
-  .glow.show{opacity:1}
-  .glow.bending{box-shadow:0 0 0 3px rgba(217,164,65,.95),0 0 26px 5px rgba(217,164,65,.5)}
-  .glow.snap{transition:opacity .1s, left .05s ease-out, top .05s ease-out}
-  .fret-nums{position:relative;height:18px;margin-top:6px}
-  .fret-num{position:absolute;transform:translateX(-50%);font-size:11px;color:var(--ink-faint);font-weight:600}
-  .inlay{position:absolute;width:9px;height:9px;border-radius:50%;background:#4a3e2c;transform:translate(-50%,-50%);z-index:1}
+  .fretboard{border:1px solid #3a2f22;border-radius:var(--radius);overflow:hidden}
+  #board{display:block}
+  .dot-grp{cursor:default}
+  .dot-grp circle.halo{opacity:0;transition:opacity .22s ease-out}
+  .dot-grp.lit circle.halo{opacity:1}
+  .dot-grp circle.body{transition:transform .22s ease-out}
+  .glow-c{opacity:0;transition:opacity .12s, cx .14s ease-out, cy .14s ease-out;filter:drop-shadow(0 0 8px rgba(63,185,138,.7))}
+  .glow-c.show{opacity:1}
+  .glow-c.bending{stroke:#d9a441 !important;filter:drop-shadow(0 0 8px rgba(217,164,65,.7))}
+  .glow-c.snap{transition:opacity .1s, cx .05s ease-out, cy .05s ease-out}
+  .dot-grp.lit .halo{filter:drop-shadow(0 0 7px rgba(63,185,138,.6))}
 
   .mic-section{padding:16px 0 0;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
   .mic-btn{background:var(--glow);border:none;color:#0c1410;font-weight:600;padding:11px 20px;border-radius:var(--radius-sm);cursor:pointer;font-size:14px;display:flex;align-items:center;gap:8px;transition:opacity .15s,background .15s}
@@ -160,9 +140,7 @@
   <div class="board-section">
     <div class="board-scroll">
       <div class="fretboard" id="fretboard">
-        <div class="frets" id="frets"></div>
-        <div class="glow snap" id="glow"></div>
-        <div class="fret-nums" id="fretNums"></div>
+        <svg id="board" xmlns="http://www.w3.org/2000/svg"></svg>
       </div>
     </div>
   </div>
@@ -305,67 +283,118 @@ import { PitchDetector } from "https://esm.sh/pitchy@4";
   }
 
   var dotMap=[];
+  var SVGNS="http://www.w3.org/2000/svg";
+  function svgEl(name,attrs){
+    var e=document.createElementNS(SVGNS,name);
+    if(attrs) for(var k in attrs) e.setAttribute(k,attrs[k]);
+    return e;
+  }
+
+  // vertical layout inside the SVG
+  var PAD_TOP=18, ROW_H=54;
+  function stringY(si){ return PAD_TOP + si*ROW_H + ROW_H/2; }   // center line of string si
 
   function render(){
     computeFretW();
     var wins=boxWindows();
     buildLegend();
-    var frets=document.getElementById("frets");frets.innerHTML="";
     dotMap=[];
-    var boardW=X0+FRETS*FRETW+18;
-    var fb=document.getElementById("fretboard");
-    fb.style.minWidth=boardW+"px";fb.style.width=boardW+"px";
-    [].forEach.call(fb.querySelectorAll(".fretwire,.nut,.inlay,.boxshade"),function(n){n.remove()});
-    var boardH=STRINGS.length*54;
 
-    var nut=document.createElement("div");nut.className="nut";
-    nut.style.left=X0+"px";nut.style.height=boardH+"px";fb.appendChild(nut);
-    for(var f=1;f<=FRETS;f++){
-      var w=document.createElement("div");w.className="fretwire";
-      w.style.left=fretWireX(f)+"px";w.style.height=boardH+"px";fb.appendChild(w);
-    }
+    var boardH = PAD_TOP + STRINGS.length*ROW_H + 26;   // +26 for fret numbers row
+    var stringsBottom = PAD_TOP + STRINGS.length*ROW_H;
+    var boardW = X0 + FRETS*FRETW + 14;
+
+    var svg=document.getElementById("board");
+    svg.setAttribute("width", boardW);
+    svg.setAttribute("height", boardH);
+    svg.setAttribute("viewBox", "0 0 "+boardW+" "+boardH);
+    while(svg.firstChild) svg.removeChild(svg.firstChild);
+
+    // wood background
+    svg.appendChild(svgEl("rect",{x:0,y:0,width:boardW,height:boardH,fill:"#2b2218"}));
+
+    // box shade(s)
     if(wins){
       wins.forEach(function(win){
-        var loEdge=fretWireX(Math.max(0,win.lo-1));
-        var hiEdge=fretWireX(win.hi);
-        var sh=document.createElement("div");sh.className="boxshade";
-        sh.style.left=loEdge+"px";sh.style.width=(hiEdge-loEdge)+"px";sh.style.height=boardH+"px";fb.appendChild(sh);
+        var loX=fretWireX(Math.max(0,win.lo-1));
+        var hiX=fretWireX(win.hi);
+        svg.appendChild(svgEl("rect",{x:loX,y:PAD_TOP-4,width:(hiX-loX),height:(stringsBottom-PAD_TOP+8),fill:"rgba(120,170,230,0.07)",stroke:"rgba(150,190,240,0.3)","stroke-width":1,"stroke-dasharray":"4 4"}));
       });
     }
+
+    // inlays
     INLAYS.forEach(function(f){
-      var ys=f===12?[boardH*0.30,boardH*0.70]:[boardH*0.5];
-      ys.forEach(function(y){
-        var inl=document.createElement("div");inl.className="inlay";
-        inl.style.left=fretCenterX(f)+"px";inl.style.top=(18+y)+"px";fb.appendChild(inl);
+      var ys = f===12 ? [PAD_TOP+(stringsBottom-PAD_TOP)*0.30, PAD_TOP+(stringsBottom-PAD_TOP)*0.70] : [(PAD_TOP+stringsBottom)/2];
+      ys.forEach(function(cy){
+        svg.appendChild(svgEl("circle",{cx:fretCenterX(f),cy:cy,r:4.5,fill:"#4a3e2c"}));
       });
     });
 
+    // fret wires
+    for(var f=1;f<=FRETS;f++){
+      svg.appendChild(svgEl("rect",{x:fretWireX(f)-1.25,y:PAD_TOP,width:2.5,height:(stringsBottom-PAD_TOP),fill:"#8a7a5e"}));
+    }
+    // nut
+    svg.appendChild(svgEl("rect",{x:X0-3.5,y:PAD_TOP,width:7,height:(stringsBottom-PAD_TOP),rx:2,fill:"#d8d2c4"}));
+
+    // strings (horizontal) + open labels
+    var stringW=[3,2.6,2.2,1.8,1.4,1.1], stringCol=["#6a5c44","#665841","#62543e","#5e503a","#5a4d37","#564a34"];
     STRINGS.forEach(function(str,si){
-      var row=document.createElement("div");row.className="string-row";
-      var line=document.createElement("div");line.className="string-line";
-      line.style.left=X0+"px";row.appendChild(line);
-      var open=document.createElement("div");open.className="open-label";open.textContent=str.name;row.appendChild(open);
+      var y=stringY(si);
+      svg.appendChild(svgEl("rect",{x:X0,y:y-stringW[si]/2,width:(boardW-X0-10),height:stringW[si],fill:stringCol[si]}));
+      var lbl=svgEl("text",{x:X0-30,y:y+4,fill:"var(--ink-faint)","font-size":13,"font-weight":600,"text-anchor":"middle"});
+      lbl.textContent=str.name; svg.appendChild(lbl);
+    });
+
+    // fret numbers
+    for(var f=1;f<=FRETS;f++){
+      var t=svgEl("text",{x:fretCenterX(f),y:stringsBottom+18,fill:"var(--ink-faint)","font-size":11,"font-weight":600,"text-anchor":"middle"});
+      t.textContent=f; svg.appendChild(t);
+    }
+
+    // note dots
+    STRINGS.forEach(function(str,si){
+      var y=stringY(si);
       for(var f=0;f<=FRETS;f++){
         var pc=(str.open+f)%12;
         var info=pcInfo(pc);
         if(!info) continue;
         if(!inAnyWindow(f,wins)) continue;
-        var cell=document.createElement("div");cell.className="cell";
-        cell.style.left=fretCenterX(f)+"px";
-        var dot=document.createElement("div");
-        dot.className="dot "+info.color+(info.root?" root":"");
-        dot.textContent=CHROMATIC[pc];
-        cell.appendChild(dot);row.appendChild(cell);
-        dotMap.push({string:si,midi:(str.octave+1)*12+str.open+f,pc:pc,el:dot});
+        var cx=fretCenterX(f);
+        var r = info.color==="diatonic" ? 16 : 18;
+        var g=svgEl("g",{class:"dot-grp"});
+        // halo (green glow ring) under body
+        g.appendChild(svgEl("circle",{class:"halo",cx:cx,cy:y,r:r+3,fill:"none",stroke:"#3fb98a","stroke-width":3}));
+        // body
+        var fill = info.color==="both" ? "url(#bothGrad)"
+                 : info.color==="min" ? "var(--minor)"
+                 : info.color==="maj" ? "var(--major)"
+                 : info.color==="blue" ? "var(--blue)"
+                 : "var(--diatonic)";
+        g.appendChild(svgEl("circle",{class:"body",cx:cx,cy:y,r:r,fill:fill}));
+        // tonic outline
+        if(info.root){
+          g.appendChild(svgEl("circle",{cx:cx,cy:y,r:r,fill:"none",stroke:"var(--rootring)","stroke-width":3}));
+        }
+        var tx=svgEl("text",{x:cx,y:y+4,fill:"#fff","font-size":(info.color==="diatonic"?11:13),"font-weight":700,"text-anchor":"middle"});
+        tx.textContent=CHROMATIC[pc];
+        g.appendChild(tx);
+        svg.appendChild(g);
+        dotMap.push({string:si,midi:(str.octave+1)*12+str.open+f,pc:pc,el:g});
       }
-      frets.appendChild(row);
     });
 
-    var nums=document.getElementById("fretNums");nums.innerHTML="";
-    for(var f=1;f<=FRETS;f++){
-      var n=document.createElement("div");n.className="fret-num";
-      n.textContent=f;n.style.left=fretCenterX(f)+"px";nums.appendChild(n);
-    }
+    // gradient def for "both" dots + glow circle
+    var defs=svgEl("defs");
+    var grad=svgEl("linearGradient",{id:"bothGrad",x1:"0",y1:"0",x2:"1",y2:"0"});
+    grad.appendChild(svgEl("stop",{offset:"50%","stop-color":"var(--minor)"}));
+    grad.appendChild(svgEl("stop",{offset:"50%","stop-color":"var(--major)"}));
+    defs.appendChild(grad);
+    svg.insertBefore(defs, svg.firstChild);
+
+    // glow circle (bend mode) — on top
+    var glow=svgEl("circle",{id:"glow",class:"glow-c"+(state.hlMode==="note"?" snap":""),cx:0,cy:0,r:18,fill:"none",stroke:"#3fb98a","stroke-width":3});
+    svg.appendChild(glow);
   }
 
   function buildLegend(){
@@ -386,18 +415,16 @@ import { PitchDetector } from "https://esm.sh/pitchy@4";
   function placeGlow(midiFloat){
     var glow=document.getElementById("glow");
     if(state.hlMode==="note"){
-      // light up ALL visible dots of the played pitch class (like the first version)
-      glow.classList.remove("show");          // single glow not used in note mode
+      if(glow) glow.classList.remove("show");
       clearLitDots();
       if(midiFloat==null) return;
       var pc=((Math.round(midiFloat)%12)+12)%12;
-      dotMap.forEach(function(d){
-        if(d.pc===pc) d.el.classList.add("lit");
-      });
+      dotMap.forEach(function(d){ if(d.pc===pc) d.el.classList.add("lit"); });
       return;
     }
-    // bend mode: single sliding glow following the exact pitch
+    // bend mode: single sliding glow following exact pitch
     clearLitDots();
+    if(!glow) return;
     if(midiFloat==null){glow.classList.remove("show");return;}
     var best=null,bd=999;
     dotMap.forEach(function(d){var dist=Math.abs(d.midi-midiFloat);if(dist<bd){bd=dist;best=d;}});
@@ -405,9 +432,10 @@ import { PitchDetector } from "https://esm.sh/pitchy@4";
     var str=STRINGS[best.string];
     var openMidi=(str.octave+1)*12+str.open;
     var ff=Math.max(0,Math.min(FRETS,midiFloat-openMidi));
-    var x = ff<=0 ? X0-22 : X0+(ff-0.5)*FRETW;
-    var y = 18 + best.string*54 + 27;
-    glow.style.left=x+"px";glow.style.top=y+"px";glow.classList.add("show");
+    var cx = ff<=0 ? X0-22 : X0+(ff-0.5)*FRETW;
+    var cy = stringY(best.string);
+    glow.setAttribute("cx",cx); glow.setAttribute("cy",cy);
+    glow.classList.add("show");
   }
 
   // ================= AUDIO =================
