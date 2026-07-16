@@ -21,8 +21,16 @@
   html,body{background:var(--bg);color:var(--ink);font-family:'Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased}
   body{min-height:100vh;padding:0 0 56px}
   .mono{font-family:'SF Mono','Roboto Mono',Menlo,Consolas,monospace}
-  header{border-bottom:1px solid var(--line);padding:22px 28px;display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
+  header{border-bottom:1px solid var(--line);padding:22px 28px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
   .logo{font-size:23px;font-weight:700;letter-spacing:-0.02em}
+  .header-actions{display:flex;gap:8px}
+  .header-actions .ico{display:none}
+  @media (max-width:600px){
+    header{padding:16px 18px}
+    .header-actions .txt{display:none}
+    .header-actions .ico{display:inline}
+    .header-actions .tg{padding:9px 13px;font-size:15px}
+  }
   .wrap{max-width:1240px;margin:0 auto;padding:0 28px}
 
   .controls{display:flex;gap:30px;flex-wrap:wrap;align-items:flex-start;padding:26px 0 22px;border-bottom:1px solid var(--line)}
@@ -78,12 +86,55 @@
   .now .nb .oct{font-size:15px;color:var(--ink-dim);vertical-align:super}
   .now .meta{font-size:13px;color:var(--ink-dim)}
   .now .cents{font-weight:600}.now .cents.bend{color:var(--glowbend)}
+
+  .modal{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:20px;
+         background:rgba(8,9,12,.72);opacity:0;visibility:hidden;transition:opacity .15s ease,visibility .15s}
+  .modal.open{opacity:1;visibility:visible}
+  .modal-box{position:relative;width:100%;max-width:420px;background:var(--panel);border:1px solid var(--line);
+             border-radius:var(--radius);padding:28px}
+  .modal h2{font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--ink-faint);font-weight:600}
+  .modal p{margin:14px 0 20px;font-size:14px;line-height:1.55;color:var(--ink-dim)}
+  .modal-close{position:absolute;top:10px;right:10px;width:30px;height:30px;background:transparent;border:none;
+               color:var(--ink-faint);font-size:20px;line-height:1;cursor:pointer;border-radius:var(--radius-sm);transition:color .12s,background .12s}
+  .modal-close:hover{color:var(--ink);background:var(--panel-2)}
+  .btn-accent{display:inline-flex;align-items:center;justify-content:center;background:var(--glow);color:#0c1410;
+              border:none;padding:11px 20px;border-radius:var(--radius-sm);font-size:14px;font-weight:600;
+              text-decoration:none;cursor:pointer;transition:opacity .15s}
+  .btn-accent:hover{opacity:.9}
+  .modal .tg{text-decoration:none;display:inline-flex}
+  .alt{margin:12px 0 0;font-size:12px;color:var(--ink-dim);line-height:1.5}
+  .alt button{background:none;border:none;padding:0;font:inherit;color:var(--ink);cursor:pointer;
+              border-bottom:1px dashed var(--line-bright)}
+  .alt button:hover{color:var(--glow);border-bottom-color:var(--glow)}
 </style>
 </head>
 <body>
 <header>
   <div class="logo">Play Your Solo</div>
+  <div class="header-actions">
+    <button class="tg" id="btn-support"><span class="txt">Поддержать</span><span class="ico">♥</span></button>
+    <button class="tg" id="btn-feedback"><span class="txt">Поделиться фидбеком</span><span class="ico">✉</span></button>
+  </div>
 </header>
+
+<div class="modal" id="modal-support" role="dialog" aria-modal="true" aria-labelledby="modal-support-title">
+  <div class="modal-box">
+    <button class="modal-close" data-close aria-label="Закрыть">×</button>
+    <h2 id="modal-support-title">Поддержать проект</h2>
+    <p>Привет! Это Даша, автор этого мини-проекта. Если он оказался полезен — я буду рада, если вы поддержите его любым донатом.</p>
+    <a class="btn-accent" href="https://www.tinkoff.ru/rm/r_xfwzeGQKAK.rSAUwSSfQy/kJA2Z88440" target="_blank" rel="noopener">Поддержать</a>
+    <p class="alt">или по номеру <button type="button" id="copyPhone">+7 995 155 23 20</button> (Дарья М.)</p>
+  </div>
+</div>
+
+<div class="modal" id="modal-feedback" role="dialog" aria-modal="true" aria-labelledby="modal-feedback-title">
+  <div class="modal-box">
+    <button class="modal-close" data-close aria-label="Закрыть">×</button>
+    <h2 id="modal-feedback-title">Поделиться фидбеком</h2>
+    <p>Нашли баг или есть идея, как улучшить проект? Напишите мне в Telegram, я буду рада любым идеям!</p>
+    <a class="tg" href="https://t.me/mar_dasha" target="_blank" rel="noopener">Написать в Telegram</a>
+  </div>
+</div>
 
 <div class="wrap">
   <div class="controls">
@@ -145,6 +196,36 @@
     </div>
   </div>
 </div>
+
+<script>
+(function(){
+  "use strict";
+  function open(m){ m.classList.add("open"); }
+  function closeAll(){
+    [].forEach.call(document.querySelectorAll(".modal.open"),function(m){m.classList.remove("open")});
+  }
+  document.getElementById("btn-support").onclick=function(){open(document.getElementById("modal-support"))};
+  document.getElementById("btn-feedback").onclick=function(){open(document.getElementById("modal-feedback"))};
+
+  [].forEach.call(document.querySelectorAll(".modal"),function(m){
+    m.addEventListener("click",function(e){
+      // клик по подложке или крестику
+      if(e.target===m || e.target.hasAttribute("data-close")) closeAll();
+    });
+  });
+  document.addEventListener("keydown",function(e){ if(e.key==="Escape") closeAll(); });
+
+  var phoneBtn=document.getElementById("copyPhone"), phoneTimer=null;
+  var phoneText=phoneBtn.textContent;
+  phoneBtn.onclick=function(){
+    navigator.clipboard.writeText("+79951552320").then(function(){
+      phoneBtn.textContent="Скопировано";
+      clearTimeout(phoneTimer);
+      phoneTimer=setTimeout(function(){phoneBtn.textContent=phoneText;},1500);
+    });
+  };
+})();
+</script>
 
 <script type="module">
 import { PitchDetector } from "https://esm.sh/pitchy@4";
